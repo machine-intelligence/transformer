@@ -29,15 +29,15 @@ class Graph():
             self.decoder_inputs = tf.concat((tf.ones_like(self.y[:, :1]) * 2, self.y[:, :-1]), -1)  # 2:<S>
 
             # Load vocabulary
-            de2idx, idx2de = load_de_vocab()
             en2idx, idx2en = load_en_vocab()
+            de2idx, idx2de = load_de_vocab()
 
             # Encoder
             with tf.variable_scope("encoder"):
                 # Embedding
                 self.enc = embedding(
                     self.x,
-                    vocab_size=len(de2idx),
+                    vocab_size=len(en2idx),
                     num_units=hp.hidden_units,
                     scale=True,
                     scope="enc_embed")
@@ -84,7 +84,7 @@ class Graph():
             with tf.variable_scope("decoder"):
                 # Embedding
                 self.dec = embedding(self.decoder_inputs,
-                                     vocab_size=len(en2idx),
+                                     vocab_size=len(de2idx),
                                      num_units=hp.hidden_units,
                                      scale=True,
                                      scope="dec_embed")

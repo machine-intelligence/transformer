@@ -31,8 +31,8 @@ def create_data(source_sents, target_sents):
     # Index
     x_list, y_list, Sources, Targets = [], [], [], []
     for source_sent, target_sent in zip(source_sents, target_sents):
-        x = [de2idx.get(word, 1) for word in (source_sent + u" </S>").split()]  # 1: OOV, </S>: End of Text
-        y = [en2idx.get(word, 1) for word in (target_sent + u" </S>").split()]
+        x = [en2idx.get(word, 1) for word in (target_sent + u" </S>").split()]
+        y = [de2idx.get(word, 1) for word in (source_sent + u" </S>").split()]  # 1: OOV, </S>: End of Text
         if max(len(x), len(y)) <= hp.maxlen:
             x_list.append(np.array(x))
             y_list.append(np.array(y))
@@ -49,10 +49,10 @@ def create_data(source_sents, target_sents):
     return X, Y, Sources, Targets
 
 def load_train_data():
-    de_sents = [regex.sub("[^\s\p{Latin}']", "", line) for line in codecs.open(hp.source_train, 'r', 'utf-8').read().split("\n") if line and line[0] != "<"]
     en_sents = [regex.sub("[^\s\p{Latin}']", "", line) for line in codecs.open(hp.target_train, 'r', 'utf-8').read().split("\n") if line and line[0] != "<"]
+    de_sents = [regex.sub("[^\s\p{Latin}']", "", line) for line in codecs.open(hp.source_train, 'r', 'utf-8').read().split("\n") if line and line[0] != "<"]
 
-    X, Y, Sources, Targets = create_data(de_sents, en_sents)
+    X, Y, Sources, Targets = create_data(en_sents, de_sents)
     return X, Y
 
 def load_test_data():
@@ -61,10 +61,10 @@ def load_test_data():
         line = regex.sub("[^\s\p{Latin}']", "", line)
         return line.strip()
 
-    de_sents = [_refine(line) for line in codecs.open(hp.source_test, 'r', 'utf-8').read().split("\n") if line and line[:4] == "<seg"]
     en_sents = [_refine(line) for line in codecs.open(hp.target_test, 'r', 'utf-8').read().split("\n") if line and line[:4] == "<seg"]
+    de_sents = [_refine(line) for line in codecs.open(hp.source_test, 'r', 'utf-8').read().split("\n") if line and line[:4] == "<seg"]
 
-    X, Y, Sources, Targets = create_data(de_sents, en_sents)
+    X, Y, Sources, Targets = create_data(en_sents, de_sents)
     return X, Sources, Targets  # (1064, 150)
 
 def get_batch_data():
