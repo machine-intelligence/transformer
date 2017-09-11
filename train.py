@@ -25,6 +25,8 @@ class Graph():
                 self.x = tf.placeholder(tf.int32, shape=(None, hp.maxlen))
                 self.y = tf.placeholder(tf.int32, shape=(None, hp.maxlen))
 
+            self.tensors_of_interest = {}
+
             # define decoder inputs
             self.decoder_inputs = tf.concat((tf.ones_like(self.y[:, :1]) * 2, self.y[:, :-1]), -1)  # 2:<S>
 
@@ -69,13 +71,16 @@ class Graph():
                 for i in range(hp.num_blocks):
                     with tf.variable_scope("num_blocks_{}".format(i)):
                         # Multihead Attention
-                        self.enc = multihead_attention(queries=self.enc,
-                                                       keys=self.enc,
-                                                       num_units=hp.hidden_units,
-                                                       num_heads=hp.num_heads,
-                                                       dropout_rate=hp.dropout_rate,
-                                                       is_training=is_training,
-                                                       causality=False)
+                        self.enc, new_tensors = multihead_attention(
+                            queries=self.enc,
+                            memory=self.enc,
+                            num_units=hp.hidden_units,
+                            num_heads=hp.num_heads,
+                            dropout_rate=hp.dropout_rate,
+                            is_training=is_training,
+                            causality=False,
+                            num_block=i)
+                        self.tensors_of_interest.update(new_tensors)
 
                         # Feed Forward
                         self.enc = feedforward(self.enc, num_units=[4 * hp.hidden_units, hp.hidden_units])
@@ -116,30 +121,30 @@ class Graph():
                 for i in range(hp.num_blocks):
                     with tf.variable_scope("num_blocks_{}".format(i)):
                         # Multihead Attention ( self-attention)
-                        self.dec = multihead_attention(queries=self.dec,
-                                                       keys=self.dec,
-                                                       num_units=hp.hidden_units,
-                                                       num_heads=hp.num_heads,
-                                                       dropout_rate=hp.dropout_rate,
-                                                       is_training=is_training,
-                                                       causality=True,
-                                                       scope="self_attention")
+                        self.dec, _ = multihead_attention(queries=self.dec,
+                                                          memory=self.dec,
+                                                          num_units=hp.hidden_units,
+                                                          num_heads=hp.num_heads,
+                                                          dropout_rate=hp.dropout_rate,
+                                                          is_training=is_training,
+                                                          causality=True,
+                                                          scope="self_attention")
 
                         # Multihead Attention ( vanilla attention)
-                        self.dec = multihead_attention(queries=self.dec,
-                                                       keys=self.enc,
-                                                       num_units=hp.hidden_units,
-                                                       num_heads=hp.num_heads,
-                                                       dropout_rate=hp.dropout_rate,
-                                                       is_training=is_training,
-                                                       causality=False,
-                                                       scope="vanilla_attention")
+                        self.dec, _ = multihead_attention(queries=self.dec,
+                                                          memory=self.enc,
+                                                          num_units=hp.hidden_units,
+                                                          num_heads=hp.num_heads,
+                                                          dropout_rate=hp.dropout_rate,
+                                                          is_training=is_training,
+                                                          causality=False,
+                                                          scope="vanilla_attention")
 
                         # Feed Forward
                         self.dec = feedforward(self.dec, num_units=[4 * hp.hidden_units, hp.hidden_units])
 
             # Final linear projection
-            self.logits = tf.layers.dense(self.dec, len(en2idx))
+            self.logits = tf.layers.dense(self.dec, len(de2idx))
             self.preds = tf.to_int32(tf.arg_max(self.logits, dimension=-1))
             self.istarget = tf.to_float(tf.not_equal(self.y, 0))
             self.acc = tf.reduce_sum(tf.to_float(tf.equal(self.preds, self.y)) * self.istarget) / (tf.reduce_sum(self.istarget))
@@ -147,7 +152,7 @@ class Graph():
 
             if is_training:
                 # Loss
-                self.y_smoothed = label_smoothing(tf.one_hot(self.y, depth=len(en2idx)))
+                self.y_smoothed = label_smoothing(tf.one_hot(self.y, depth=len(de2idx)))
                 self.loss = tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.y_smoothed)
                 self.mean_loss = tf.reduce_sum(self.loss * self.istarget) / (tf.reduce_sum(self.istarget))
 
