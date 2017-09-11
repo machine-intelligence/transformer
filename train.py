@@ -161,12 +161,8 @@ class Graph():
                 self.merged = tf.summary.merge_all()
 
 if __name__ == '__main__':
-    # Load vocabulary
-    de2idx, idx2de = load_de_vocab()
-    en2idx, idx2en = load_en_vocab()
-
     # Construct graph
-    g = Graph("train")
+    g = Graph(is_training=True)
     print("Graph loaded")
 
     # Start session
@@ -176,6 +172,7 @@ if __name__ == '__main__':
     with sv.managed_session() as sess:
         for epoch in range(1, hp.num_epochs + 1):
             print("Starting epoch", epoch)
+            print()
             if sv.should_stop():
                 break
             for step in tqdm(range(g.num_batch), total=g.num_batch, ncols=70, leave=False, unit='b'):
