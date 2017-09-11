@@ -25,8 +25,8 @@ def eval():
 
     # Load data
     X, Sources, Targets = load_test_data()
-    de2idx, idx2de = load_de_vocab()
     en2idx, idx2en = load_en_vocab()
+    de2idx, idx2de = load_de_vocab()
 
 #     X, Sources, Targets = X[:33], Sources[:33], Targets[:33]
 
@@ -61,7 +61,7 @@ def eval():
 
                     # Write to file
                     for source, target, pred in zip(sources, targets, preds):  # sentence-wise
-                        got = " ".join(idx2en[idx] for idx in pred).split("</S>")[0].strip()
+                        got = " ".join(idx2de[idx] for idx in pred).split("</S>")[0].strip()
                         fout.write("- source: " + source + "\n")
                         fout.write("- expected: " + target + "\n")
                         fout.write("- got: " + got + "\n\n")
