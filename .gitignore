@@ -104,3 +104,6 @@ preprocessed
 
 # PyCharm project files
 .idea/
+
+# figures
+fig/

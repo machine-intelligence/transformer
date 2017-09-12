@@ -252,9 +252,9 @@ def multihead_attention(queries,
         outputs = tf.concat(tf.split(outputs, num_heads, axis=0), axis=2)  # (N, T_q, C)
 
         # Store the relative strengths of the output and residual signals.
-        attention_mean, attention_variance = tf.nn.moments(outputs, [-1], keep_dims=True)
+        attention_mean, attention_variance = tf.nn.moments(outputs, [-1], keep_dims=False)
         tensors_of_interest["Attention-Signal-Strength" + suffix] = attention_variance ** 0.5
-        residual_mean, residual_variance = tf.nn.moments(queries, [-1], keep_dims=True)
+        residual_mean, residual_variance = tf.nn.moments(queries, [-1], keep_dims=False)
         tensors_of_interest["Residual-Signal-Strength" + suffix] = residual_variance ** 0.5
 
         # Residual connection
