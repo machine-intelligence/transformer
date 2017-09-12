@@ -38,12 +38,14 @@ class Graph():
             # Encoder
             with tf.variable_scope("encoder"):
                 # Embedding
-                self.enc = embedding(
+                self.enc, new_tensors = embedding(
                     self.x,
                     vocab_size=len(en2idx),
                     num_units=hp.hidden_units,
                     scale=True,
                     scope="enc_embed")
+
+                self.tensors_of_interest['English-Embedding'] = new_tensors['Embedding']
 
                 # Positional Encoding
                 if hp.sinusoid:
@@ -55,13 +57,17 @@ class Graph():
                         scale=False,
                         scope="enc_pe")
                 else:
-                    self.enc += embedding(
+                    positional_embedding, new_tensors = embedding(
                         tf.tile(tf.expand_dims(tf.range(tf.shape(self.x)[1]), 0), [tf.shape(self.x)[0], 1]),
                         vocab_size=hp.maxlen,
                         num_units=hp.hidden_units,
                         zero_pad=False,
                         scale=False,
                         scope="enc_pe")
+
+                    self.tensors_of_interest['English-Positional-Embedding'] = new_tensors['Embedding']
+
+                    self.enc += positional_embedding
 
                 # Dropout
                 self.enc = tf.layers.dropout(self.enc,
@@ -89,11 +95,14 @@ class Graph():
             # Decoder
             with tf.variable_scope("decoder"):
                 # Embedding
-                self.dec = embedding(self.decoder_inputs,
-                                     vocab_size=len(de2idx),
-                                     num_units=hp.hidden_units,
-                                     scale=True,
-                                     scope="dec_embed")
+                self.dec, new_tensors = embedding(
+                    self.decoder_inputs,
+                    vocab_size=len(de2idx),
+                    num_units=hp.hidden_units,
+                    scale=True,
+                    scope="dec_embed")
+
+                self.tensors_of_interest['German-Embedding'] = new_tensors['Embedding']
 
                 # Positional Encoding
                 if hp.sinusoid:
@@ -105,13 +114,17 @@ class Graph():
                         scale=False,
                         scope="dec_pe")
                 else:
-                    self.dec += embedding(
+                    positional_embedding, new_tensors = embedding(
                         tf.tile(tf.expand_dims(tf.range(tf.shape(self.decoder_inputs)[1]), 0), [tf.shape(self.decoder_inputs)[0], 1]),
                         vocab_size=hp.maxlen,
                         num_units=hp.hidden_units,
                         zero_pad=False,
                         scale=False,
                         scope="dec_pe")
+
+                    self.tensors_of_interest['German-Positional-Embedding'] = new_tensors['Embedding']
+
+                    self.dec += positional_embedding
 
                 # Dropout
                 self.dec = tf.layers.dropout(self.dec,
