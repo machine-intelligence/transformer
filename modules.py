@@ -219,7 +219,7 @@ def multihead_attention(queries,
         key_masks = tf.tile(key_masks, [num_heads, 1])  # (h*N, T_k)
         key_masks = tf.tile(tf.expand_dims(key_masks, 1), [1, tf.shape(queries)[1], 1])  # (h*N, T_q, T_k)
 
-        paddings = tf.ones_like(outputs) * (-2**32 + 1)
+        paddings = tf.ones_like(outputs) * (-(2**32) + 1)
         outputs = tf.where(tf.equal(key_masks, 0), paddings, outputs)  # (h*N, T_q, T_k)
 
         # Causality = Future blinding
@@ -228,7 +228,7 @@ def multihead_attention(queries,
             tril = tf.contrib.linalg.LinearOperatorTriL(diag_vals).to_dense()  # (T_q, T_k)
             masks = tf.tile(tf.expand_dims(tril, 0), [tf.shape(outputs)[0], 1, 1])  # (h*N, T_q, T_k)
 
-            paddings = tf.ones_like(masks) * (-2**32 + 1)
+            paddings = tf.ones_like(masks) * (-(2**32) + 1)
             outputs = tf.where(tf.equal(masks, 0), paddings, outputs)  # (h*N, T_q, T_k)
 
         # Activation
