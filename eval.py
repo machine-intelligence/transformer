@@ -71,7 +71,11 @@ def visualizeEncoderAttention(sources, tensors_of_interest, batch_index: int):
 
         for i, word in enumerate(sentence.split()):
             text_size_x, text_size_y = draw.textsize(word)
-            draw.text((((i + 1) * x_step_size) - text_size_x / 2.0, im.size[1] - 20), text=word, fill=(0, 0, 0, 255))
+            text_x = (i + 1) * x_step_size - text_size_x / 2.0
+            text_y = im.size[1] - 20
+
+            draw.rectangle(((text_x, text_y), (text_x + text_size_x, text_y + text_size_y)), fill=(255, 255, 255, 127))
+            draw.text((text_x, text_y), text=word, fill=(0, 0, 0, 255))
 
         del draw
         im.save("fig/Activation-Batch-{}-Sentence-{}.png".format(batch_index, sentence_index), "PNG")
