@@ -101,3 +101,6 @@ ENV/
 corpora
 logdir
 preprocessed
+
+# PyCharm project files
+.idea/
