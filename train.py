@@ -159,7 +159,7 @@ class Graph():
 
             # Final linear projection
             self.logits = tf.layers.dense(self.dec, len(de2idx))
-            self.preds = tf.to_int32(tf.arg_max(self.logits, dimension=-1))
+            self.preds = tf.to_int32(tf.argmax(self.logits, dimension=-1))
             self.istarget = tf.to_float(tf.not_equal(self.y, 0))
             self.acc = tf.reduce_sum(tf.to_float(tf.equal(self.preds, self.y)) * self.istarget) / (tf.reduce_sum(self.istarget))
             tf.summary.scalar('acc', self.acc)
