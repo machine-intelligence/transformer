@@ -13,6 +13,7 @@ import typing
 
 import tensorflow as tf
 import numpy as np
+import numpy.linalg
 
 from hyperparams import Hyperparams as hp
 from data_load import load_test_data, load_de_vocab, load_en_vocab
@@ -23,8 +24,13 @@ from PIL import Image, ImageDraw, ImageFont
 batches_to_visualize = 1
 
 def getRelevantWordIndicesAndScores(wordEmbeddings, wordVectors) -> typing.Iterable[typing.Tuple[int, float]]:
-    print('Shapes:', wordEmbeddings.shape, wordVectors.shape)
-    return [(0, 0.8)] * len(wordVectors)
+    # Normalize the lengths of all the embedding vectors, so that the similarity scores are in [0, 1]:
+    normalizedWordEmbeddings = wordEmbeddings / np.linalg.norm(wordEmbeddings, axis=-1)[:, np.newaxis]
+    normalizedWordVectors = wordVectors / np.linalg.norm(wordVectors, axis=-1)[:, np.newaxis]
+
+    similarity_scores = np.dot(normalizedWordVectors, np.transpose(normalizedWordEmbeddings))
+    maximum_indices = similarity_scores.argmax(axis=-1)
+    return [(maximum_index, max(0, similarity_scores[query_index, maximum_index])) for query_index, maximum_index in enumerate(maximum_indices)]
 
 def visualizeEncoderAttention(sources, idx2en, tensors_of_interest, batch_index: int):
     x_step_size = 100
@@ -85,7 +91,8 @@ def visualizeEncoderAttention(sources, idx2en, tensors_of_interest, batch_index:
 
                 assert 0.0 <= relevance_score <= 1.0
                 draw.rectangle(((text_x, text_y), (text_x + text_size_x, text_y + text_size_y)), fill=(255, 255, 255, int(180 * relevance_score)))
-                draw.text((text_x, text_y), text=relevant_word, fill=(0, 0, 0, int(200 * relevance_score + 55)))
+                text_opacity = int(200 * relevance_score + 55)
+                draw.text((text_x, text_y), text=relevant_word, fill=(255 - text_opacity, 255 - text_opacity, 255 - text_opacity, text_opacity))
 
         for i, word in enumerate(sentence.split()):
             text_size_x, text_size_y = draw.textsize(word)
