@@ -45,7 +45,7 @@ class Graph():
                     scale=True,
                     scope="enc_embed")
 
-                self.tensors_of_interest['English-Embedding'] = new_tensors['Embedding']
+                self.tensors_of_interest['English-Word-Embedding'] = new_tensors['Embedding']
 
                 # Positional Encoding
                 if hp.sinusoid:
@@ -102,7 +102,7 @@ class Graph():
                     scale=True,
                     scope="dec_embed")
 
-                self.tensors_of_interest['German-Embedding'] = new_tensors['Embedding']
+                self.tensors_of_interest['German-Word-Embedding'] = new_tensors['Embedding']
 
                 # Positional Encoding
                 if hp.sinusoid:
