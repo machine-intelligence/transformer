@@ -9,6 +9,7 @@ https://www.github.com/kyubyong/transformer
 from __future__ import print_function
 import codecs
 import os
+import typing
 
 import tensorflow as tf
 import numpy as np
@@ -21,7 +22,11 @@ from PIL import Image, ImageDraw, ImageFont
 
 batches_to_visualize = 1
 
-def visualizeEncoderAttention(sources, tensors_of_interest, batch_index: int):
+def getRelevantWordIndicesAndScores(wordEmbeddings, wordVectors) -> typing.Iterable[typing.Tuple[int, float]]:
+    print('Shapes:', wordEmbeddings.shape, wordVectors.shape)
+    return [(0, 0.8)] * len(wordVectors)
+
+def visualizeEncoderAttention(sources, idx2en, tensors_of_interest, batch_index: int):
     x_step_size = 100
     y_step_size = 100
     colors = ((0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 0, 255), (0, 180, 255), (200, 200, 200), (255, 100, 0), (100, 0, 255))
@@ -46,6 +51,8 @@ def visualizeEncoderAttention(sources, tensors_of_interest, batch_index: int):
             attn_signal_strength = tensors_of_interest['Attention-Signal-Strength%s' % layer]
             residual_signal_strength = tensors_of_interest['Residual-Signal-Strength%s' % layer]
             activation = tensors_of_interest['Activation%s' % layer]
+            english_word_embedding = tensors_of_interest['English-Word-Embedding']
+            resulting_signal = tensors_of_interest['Output%s' % layer]
 
             for head_index in range(hp.num_heads):
                 for q_index in range(hp.maxlen):
@@ -68,6 +75,17 @@ def visualizeEncoderAttention(sources, tensors_of_interest, batch_index: int):
                     dot_x = (q_index + 1) * x_step_size
                     dot_y = im.size[1] - (layer + 1) * y_step_size
                     draw.ellipse((dot_x - scale, dot_y - scale, dot_x + scale, dot_y + scale), fill=(0, 0, 0, 127))
+
+            relevant_words_and_scores = getRelevantWordIndicesAndScores(english_word_embedding, resulting_signal[sentence_index])
+            for q_index, (relevant_word_index, relevance_score) in enumerate(relevant_words_and_scores):
+                relevant_word = idx2en[relevant_word_index]
+                text_size_x, text_size_y = draw.textsize(relevant_word)
+                text_x = (q_index + 1) * x_step_size - text_size_x / 2.0
+                text_y = im.size[1] - (layer + 1) * y_step_size + 15
+
+                assert 0.0 <= relevance_score <= 1.0
+                draw.rectangle(((text_x, text_y), (text_x + text_size_x, text_y + text_size_y)), fill=(255, 255, 255, int(180 * relevance_score)))
+                draw.text((text_x, text_y), text=relevant_word, fill=(0, 0, 0, int(200 * relevance_score + 55)))
 
         for i, word in enumerate(sentence.split()):
             text_size_x, text_size_y = draw.textsize(word)
@@ -126,7 +144,7 @@ def eval():
                         # For the first few batches, we save figures giving the attention structure in the encoder.
                         if j == 0 and i < batches_to_visualize:
                             tensor_keys = [None] + list(g.tensors_of_interest.keys())  # Add a null key at the start so it lines up with the tensors_out list
-                            visualizeEncoderAttention(sources=sources, tensors_of_interest={key: value for key, value in zip(tensor_keys, tensors_out)}, batch_index=i)
+                            visualizeEncoderAttention(sources=sources, idx2en=idx2en, tensors_of_interest={key: value for key, value in zip(tensor_keys, tensors_out)}, batch_index=i)
 
                     # Write to file
                     for source, target, pred in zip(sources, targets, preds):  # sentence-wise
