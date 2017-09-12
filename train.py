@@ -14,6 +14,7 @@ from modules import *
 import os
 import codecs
 from tqdm import tqdm
+from collections import OrderedDict
 
 class Graph():
     def __init__(self, is_training=True):
@@ -25,7 +26,7 @@ class Graph():
                 self.x = tf.placeholder(tf.int32, shape=(None, hp.maxlen))
                 self.y = tf.placeholder(tf.int32, shape=(None, hp.maxlen))
 
-            self.tensors_of_interest = {}
+            self.tensors_of_interest = OrderedDict()
 
             # define decoder inputs
             self.decoder_inputs = tf.concat((tf.ones_like(self.y[:, :1]) * 2, self.y[:, :-1]), -1)  # 2:<S>

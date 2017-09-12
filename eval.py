@@ -17,6 +17,7 @@ from hyperparams import Hyperparams as hp
 from data_load import load_test_data, load_de_vocab, load_en_vocab
 from train import Graph
 from nltk.translate.bleu_score import corpus_bleu
+from PIL import Image, ImageDraw
 
 def eval():
     # Load graph
@@ -53,11 +54,42 @@ def eval():
                     sources = Sources[i * hp.batch_size: (i + 1) * hp.batch_size]
                     targets = Targets[i * hp.batch_size: (i + 1) * hp.batch_size]
 
+                    print("Source:", sources[0])
+                    print("Target:", targets[0])
+
                     # Autoregressive inference
                     preds = np.zeros((hp.batch_size, hp.maxlen), np.int32)
                     for j in range(hp.maxlen):
-                        _preds = sess.run(g.preds, {g.x: x, g.y: preds})
+                        tensors = [g.preds] + list(g.tensors_of_interest.values())
+                        tensors_out = sess.run(tensors, {g.x: x, g.y: preds})
+                        _preds = tensors_out[0]
                         preds[:, j] = _preds[:, j]
+
+                        print([idx2de[idx] for idx in preds[0]])
+
+                        x_step_size = 100
+                        y_step_size = 100
+                        im = Image.new('RGB', (x_step_size * 11, y_step_size * 6), color=(255, 255, 255, 255))
+                        draw = ImageDraw.Draw(im, 'RGBA')
+
+                        tensor_keys = [None] + list(g.tensors_of_interest.keys())  # Add a null key at the start so it lines up with the tensors_out list
+                        for layer in range(6):
+                            tensor = tensors_out[tensor_keys.index('Activation%s' % layer)]
+                            for q_index in range(tensor[0].shape[0]):
+                                for k_index in range(tensor[0].shape[1]):
+                                    draw.line(
+                                        ((q_index + 1) * x_step_size,
+                                         im.size[1] - (layer + 1) * y_step_size,
+                                         (k_index + 1) * x_step_size,
+                                         im.size[1] - layer * y_step_size),
+                                        fill=(0, 0, 255, int(255 * tensor[0][q_index][k_index])),
+                                        width=3)
+                        del draw
+                        im.save("Activation.png", "PNG")
+                        return
+
+                    # print(g.tensors_of_interest)
+                    return
 
                     # Write to file
                     for source, target, pred in zip(sources, targets, preds):  # sentence-wise

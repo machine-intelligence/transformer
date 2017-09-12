@@ -234,6 +234,8 @@ def multihead_attention(queries,
         # Activation
         outputs = tf.nn.softmax(outputs)  # (h*N, T_q, T_k)
 
+        tensors_of_interest["Activation" + suffix] = outputs
+
         # Query Masking
         query_masks = tf.sign(tf.abs(tf.reduce_sum(queries, axis=-1)))  # (N, T_q)
         query_masks = tf.tile(query_masks, [num_heads, 1])  # (h*N, T_q)
