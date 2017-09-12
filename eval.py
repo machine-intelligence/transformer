@@ -17,7 +17,7 @@ from hyperparams import Hyperparams as hp
 from data_load import load_test_data, load_de_vocab, load_en_vocab
 from train import Graph
 from nltk.translate.bleu_score import corpus_bleu
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 def eval():
     # Load graph
@@ -54,9 +54,6 @@ def eval():
                     sources = Sources[i * hp.batch_size: (i + 1) * hp.batch_size]
                     targets = Targets[i * hp.batch_size: (i + 1) * hp.batch_size]
 
-                    print("Source:", sources[0])
-                    print("Target:", targets[0])
-
                     # Autoregressive inference
                     preds = np.zeros((hp.batch_size, hp.maxlen), np.int32)
                     for j in range(hp.maxlen):
@@ -67,26 +64,55 @@ def eval():
 
                         print([idx2de[idx] for idx in preds[0]])
 
-                        x_step_size = 100
-                        y_step_size = 100
-                        im = Image.new('RGB', (x_step_size * 11, y_step_size * 6), color=(255, 255, 255, 255))
-                        draw = ImageDraw.Draw(im, 'RGBA')
+                        if j == 0:
+                            for sentence_idx in range(len(sources)):
+                                print("Source:", sources[sentence_idx])
+                                print("Target:", targets[sentence_idx])
 
-                        tensor_keys = [None] + list(g.tensors_of_interest.keys())  # Add a null key at the start so it lines up with the tensors_out list
-                        for layer in range(6):
-                            tensor = tensors_out[tensor_keys.index('Activation%s' % layer)]
-                            for q_index in range(tensor[0].shape[0]):
-                                for k_index in range(tensor[0].shape[1]):
-                                    draw.line(
-                                        ((q_index + 1) * x_step_size,
-                                         im.size[1] - (layer + 1) * y_step_size,
-                                         (k_index + 1) * x_step_size,
-                                         im.size[1] - layer * y_step_size),
-                                        fill=(0, 0, 255, int(255 * tensor[0][q_index][k_index])),
-                                        width=3)
-                        del draw
-                        im.save("Activation.png", "PNG")
-                        return
+                                x_step_size = 100
+                                y_step_size = 100
+                                colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 0, 255), (0, 180, 255), (200, 200, 200), (255, 100, 0), (100, 0, 255)]
+                                im = Image.new('RGB', (x_step_size * (hp.maxlen + 1), y_step_size * hp.num_blocks), color=(255, 255, 255, 255))
+                                draw = ImageDraw.Draw(im, 'RGBA')
+                                # font = ImageFont.truetype("arial.ttf", 15)
+                                # draw.font = font
+
+                                tensor_keys = [None] + list(g.tensors_of_interest.keys())  # Add a null key at the start so it lines up with the tensors_out list
+                                for layer in range(hp.num_blocks):
+                                    attn_signal_strength = tensors_out[tensor_keys.index('Attention-Signal-Strength%s' % layer)]
+                                    residual_signal_strength = tensors_out[tensor_keys.index('Residual-Signal-Strength%s' % layer)]
+
+                                    activation = tensors_out[tensor_keys.index('Activation%s' % layer)]
+                                    for q_index in range(hp.maxlen):
+                                        for k_index in range(hp.maxlen):
+                                            for head_index in range(hp.num_heads):
+                                                color = colors[head_index]
+                                                strength = activation[sentence_idx + head_index * hp.batch_size][q_index][k_index]
+                                                if strength > 0.3:
+                                                    draw.line(
+                                                        ((q_index + 1) * x_step_size,
+                                                         im.size[1] - (layer + 1) * y_step_size,
+                                                         (k_index + 1) * x_step_size,
+                                                         im.size[1] - layer * y_step_size),
+                                                        fill=color + (int(255 * strength),),
+                                                        width=3)
+
+                                        residual_variance = residual_signal_strength[sentence_idx][q_index][0] ** 2
+                                        attention_variance = attn_signal_strength[sentence_idx][q_index][0] ** 2
+                                        # print("Variances:", residual_variance, attention_variance)
+                                        strength_ratio = residual_variance / (residual_variance + attention_variance)
+                                        scale = strength_ratio * 10.0
+                                        # print(strength_ratio)
+                                        dot_x = (q_index + 1) * x_step_size
+                                        dot_y = im.size[1] - (layer + 1) * y_step_size
+                                        draw.ellipse((dot_x - scale, dot_y - scale, dot_x + scale, dot_y + scale), fill=(0, 0, 0, 127))
+
+                                for i, word in enumerate(sources[sentence_idx].split()):
+                                    text_size_x, text_size_y = draw.textsize(word)
+                                    draw.text((((i + 1) * x_step_size) - text_size_x / 2.0, im.size[1] - text_size_y), text=word, fill=(0, 0, 0, 255))
+
+                                del draw
+                                im.save("%s-Activation.png" % sentence_idx, "PNG")
 
                     # print(g.tensors_of_interest)
                     return
