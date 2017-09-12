@@ -58,6 +58,7 @@ def eval():
                     preds = np.zeros((hp.batch_size, hp.maxlen), np.int32)
                     for j in range(hp.maxlen):
                         tensors = [g.preds] + list(g.tensors_of_interest.values())
+                        tensor_keys = [None] + list(g.tensors_of_interest.keys())  # Add a null key at the start so it lines up with the tensors_out list
                         tensors_out = sess.run(tensors, {g.x: x, g.y: preds})
                         _preds = tensors_out[0]
                         preds[:, j] = _preds[:, j]
@@ -77,8 +78,24 @@ def eval():
                                 # font = ImageFont.truetype("arial.ttf", 15)
                                 # draw.font = font
 
-                                tensor_keys = [None] + list(g.tensors_of_interest.keys())  # Add a null key at the start so it lines up with the tensors_out list
                                 for layer in range(hp.num_blocks):
+                                    inp = tensors_out[tensor_keys.index('Input%s' % layer)][sentence_idx]
+                                    inspect = []
+                                    for t in range(10):
+                                        target_word = inp[t]
+
+                                        temp_x = []
+                                        for word_idx in range(len(idx2en)):
+                                            index_vector = [0 for _ in range(0, t)] + [word_idx] + [0 for _ in range(t + 1, 10)]
+                                            temp_x.append(index_vector)
+
+                                        results = sess.run(g.embedding, {g.x: np.array(temp_x)})
+                                        relevant_projected_words = np.swapaxes(results, 0, 1)[t]
+                                        scores = np.dot(relevant_projected_words, target_word)
+                                        best_match = idx2en[np.argmax(scores)]
+                                        inspect.append(best_match)
+                                    print("Layer", layer, "=", " ".join(inspect))
+
                                     attn_signal_strength = tensors_out[tensor_keys.index('Attention-Signal-Strength%s' % layer)]
                                     residual_signal_strength = tensors_out[tensor_keys.index('Residual-Signal-Strength%s' % layer)]
 

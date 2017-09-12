@@ -62,6 +62,7 @@ class Graph():
                         zero_pad=False,
                         scale=False,
                         scope="enc_pe")
+                self.embedding = self.enc
 
                 # Dropout
                 self.enc = tf.layers.dropout(self.enc,
