@@ -174,7 +174,14 @@ if __name__ == '__main__':
     sv = tf.train.Supervisor(graph=g.graph,
                              logdir=hp.logdir,
                              save_model_secs=0)
+
     with sv.managed_session() as sess:
+
+        checkpoint = tf.train.latest_checkpoint(hp.logdir)
+        if checkpoint:
+            print("Checkpoint found! Restoring...")
+            sv.saver.restore(sess, checkpoint)
+
         for epoch in range(1, hp.num_epochs + 1):
             print("Starting epoch", epoch)
             print()
